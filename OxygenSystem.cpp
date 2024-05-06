@@ -29,14 +29,18 @@ UOxygenSystem::UOxygenSystem()
 /// </summary>
 void UOxygenSystem::ReduceOxygenTank()
 {
-	float decreaseAmount = DECREASE_OXYGEN_TANK_PER_SECOND_DEFAULT;
-
 	//전투 중이면 감소하지 않음
-	if (isBattle && decreaseAmount == DECREASE_OXYGEN_TANK_PER_SECOND_DEFAULT)
+	if (isBattle)
 		return;
 
 	//감소량 계산
-	float decreaseResult = oxygenTankRemain - decreaseAmount;
+	float decreaseResult = oxygenTankRemain - DECREASE_OXYGEN_TANK_PER_SECOND_DEFAULT;
+
+	//자기장 확인(추가 감소)
+	if (isInDeadZone)
+	{
+		oxygenTankRemain -= DECREASE_OXYGEN_TANK_PER_SECOND_DEFAULT;
+	}
 
 	//게임 오버 조건 체크
 	if (decreaseResult <= oxygenTankMin)
@@ -48,13 +52,6 @@ void UOxygenSystem::ReduceOxygenTank()
 
 	//산소통 감소 적용
 	oxygenTankRemain = decreaseResult;
-
-	//자기장 확인(추가 감소)
-	//산소팩 로직에서 이 함수를 호출한 경우, 자기장으로 인한 감소가 2중으로 적용되지 않도록 한다.
-	if (isInDeadZone && decreaseAmount == DECREASE_OXYGEN_TANK_PER_SECOND_DEFAULT)
-	{
-		oxygenTankRemain -= DECREASE_OXYGEN_TANK_PER_SECOND_DEFAULT;
-	}
 
 	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, FString::Printf(TEXT("Decrease Oxygen Tank! <Remain Oxygen Tank> : %2f"), oxygenTankRemain));
 
@@ -84,8 +81,9 @@ void UOxygenSystem::UseOxygenPackage()
 	if (DecreaseOxygenPackage())
 	{
 		// n초 동안 회복하며, 도중에 움직이면 회복이 취소되는 로직을 먼저 적용해야 함.
-		// 쿨타임도 필요함
+		// 연속 사용을 막기 위한 쿨타임도 필요함
 		// 만약 회복 도중에 취소된다면, 감소된 산소팩을 다시 증가시켜야함
+		// UI에는 산소통 회복이 완전히 끝나면 감소된 산소팩 개수를 적용할 것
 		// 이게 전부 끝나면 산소통 회복
 
 		ChargeOxygenTank(oxygenPackageRestoreAmount);
